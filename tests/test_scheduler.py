@@ -184,3 +184,17 @@ def test_db_roundtrip_and_due(tmp_path):
             await db.close()
 
     asyncio.run(run())
+
+
+def test_upcoming_and_card_show_dates_from_the_rule():
+    from bot import formatting
+
+    now = local(2026, 11, 12, 22, 0)
+    rem = make(now, local(2026, 11, 13, 9, 0), rrule="FREQ=HOURLY;INTERVAL=290")
+    got = scheduler.upcoming(rem, now, TZ, count=3)
+    assert got == [local(2026, 11, 13, 9, 0), local(2026, 11, 25, 11, 0), local(2026, 12, 7, 13, 0)]
+    assert scheduler.upcoming(make(now, local(2026, 11, 13, 9, 0)), now, TZ) == []
+
+    future = datetime.now(UTC) + timedelta(days=400)
+    last_tue = make(datetime.now(UTC), future, rrule="FREQ=MONTHLY;BYDAY=-1TU")
+    assert "Next: " in formatting.card(last_tue, TZ)

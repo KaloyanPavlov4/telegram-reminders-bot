@@ -1,8 +1,9 @@
 """Message texts (Telegram HTML)."""
 
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, timedelta, timezone, tzinfo
 from html import escape
 
+from . import scheduler
 from .models import Reminder
 
 ICON = {"low": "🔵", "medium": "🟡", "high": "🟠", "urgent": "🔴"}
@@ -41,6 +42,11 @@ def card(rem: Reminder, tz: tzinfo) -> str:
         lines.append(f"🗓 {when(rem.due_at, tz)}")
         if rem.rrule:
             lines.append(f"🔁 {escape(rem.recurrence_text or rem.rrule)}")
+            # Computed from the actual rule, so a misparsed pattern is visible.
+            dates = scheduler.upcoming(rem, datetime.now(timezone.utc), tz)
+            if dates:
+                shown = " · ".join(d.astimezone(tz).strftime("%a %d %b %H:%M") for d in dates)
+                lines.append(f"     <i>Next: {shown}</i>")
         lines.append(f"⏰ {timing(rem)}")
     else:
         lines.append("🗓 No date — it will only show up in /list")

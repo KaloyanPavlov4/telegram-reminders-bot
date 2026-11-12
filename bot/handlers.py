@@ -235,6 +235,11 @@ async def _process(
             text_out = fmt.card(rem, st.tz)
             if rem.due_at and rem.due_at < now and not rem.rrule:
                 text_out += "\n⚠️ This time is in the past."
+            if draft.recurrence_rrule and rem.due_at and not rem.rrule:
+                text_out += (
+                    "\n⚠️ I couldn't work out the repeat pattern, so this would fire once only. "
+                    "Press Edit and describe it differently."
+                )
             await msg.reply_text(text_out, parse_mode=HTML, reply_markup=_draft_keyboard(st.draft_seq))
     elif parsed.intent == "query":
         start = _parse_local(parsed.query_from, st.tz)

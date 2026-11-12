@@ -57,6 +57,16 @@ def occurrences(
     return [d.replace(tzinfo=tz).astimezone(UTC) for d in found[:limit]]
 
 
+def upcoming(rem: Reminder, now: datetime, tz: tzinfo, count: int = 4) -> list[datetime]:
+    """The next `count` due times of a recurring reminder, from its current
+    occurrence (or from now, if that is already past)."""
+    if rem.due_at is None or not rem.rrule:
+        return []
+    start = _local(max(rem.due_at, now), tz)
+    found = _rule(rem, tz).xafter(start, count=count, inc=True)
+    return [d.replace(tzinfo=tz).astimezone(UTC) for d in found]
+
+
 def _points(rem: Reminder) -> list[datetime]:
     offsets = set(rem.remind_before) | {0}
     return sorted(rem.due_at - timedelta(minutes=m) for m in offsets)
