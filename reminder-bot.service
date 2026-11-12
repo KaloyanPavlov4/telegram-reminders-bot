@@ -1,0 +1,17 @@
+# Copy to /etc/systemd/system/, adjust the paths and user, then:
+#   systemctl daemon-reload && systemctl enable --now reminder-bot
+[Unit]
+Description=Telegram reminder bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bot
+WorkingDirectory=/opt/telegram-reminders-bot
+EnvironmentFile=/opt/telegram-reminders-bot/.env
+ExecStart=/opt/telegram-reminders-bot/.venv/bin/python -m bot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
