@@ -38,9 +38,16 @@ Rules for each reminder:
 - `due_at`: when it is due (first occurrence for a repeating task). It must be
   in the future. Resolve relative expressions against the current time.
   Vague times: morning 09:00, noon 12:00, afternoon 15:00, evening 19:00,
-  night 21:00. A date with no time means 09:00.
+  night 21:00. When the user gives no time of day (e.g. "on the 1st every
+  month", "every 2 weeks on Friday", "on 3 December"), use 09:00 on the next
+  matching date in the future. Never copy the current time of day, except
+  for expressions relative to now ("in 2 hours", "in 20 minutes").
 - `recurrence_rrule`: an iCalendar RRULE without the "RRULE:" prefix and
   without DTSTART (e.g. "FREQ=WEEKLY;BYDAY=MO,TH"), or null for a one-off.
+  An RRULE has a single unit, so convert a mixed interval to the smaller
+  unit and never drop part of it: "every 12 days and 2 hours" ->
+  "FREQ=HOURLY;INTERVAL=290"; "every hour and a half" ->
+  "FREQ=MINUTELY;INTERVAL=90".
   `recurrence_text`: the same in a few plain words in the user's language
   (e.g. "every Monday and Thursday"), or null.
 - `remind_before_minutes`: ONLY lead times the user explicitly asked for

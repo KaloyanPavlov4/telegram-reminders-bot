@@ -84,7 +84,7 @@ def build_reminder(draft: ReminderDraft, tz: ZoneInfo, now: datetime, source: Op
         default_before, nag = TIMING_DEFAULTS[draft.importance]
         before = list(default_before)
     rule = scheduler.clean_rrule(draft.recurrence_rrule) if due else None
-    return Reminder(
+    rem = Reminder(
         task=draft.task.strip() or "Reminder",
         importance=draft.importance,
         due_at=due,
@@ -97,6 +97,12 @@ def build_reminder(draft: ReminderDraft, tz: ZoneInfo, now: datetime, source: Op
         source_text=source,
         created_at=now,
     )
+    if rule and due < now:
+        # First occurrence already passed (e.g. "every Friday" said on a Friday
+        # afternoon): show and schedule the next one. series_start keeps the
+        # original anchor so intervals stay aligned.
+        rem.due_at = scheduler.next_occurrence(rem, now, tz) or due
+    return rem
 
 
 def _draft_json(rem: Reminder, tz: ZoneInfo) -> str:
