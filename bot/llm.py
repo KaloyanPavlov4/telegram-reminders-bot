@@ -12,6 +12,8 @@ from .models import ParsedIntent, Reminder
 
 log = logging.getLogger(__name__)
 
+TIMEOUT_SECONDS = 30
+
 SYSTEM = """\
 You are the parser of a personal reminder bot on Telegram. Convert the user's
 message (text, or a voice recording) into JSON following the schema.
@@ -119,10 +121,13 @@ class GeminiParser:
         last: Optional[Exception] = None
         for attempt in range(3):
             try:
-                response = await self.client.aio.models.generate_content(
-                    model=self.model,
-                    contents=[types.Content(role="user", parts=parts)],
-                    config=config,
+                response = await asyncio.wait_for(
+                    self.client.aio.models.generate_content(
+                        model=self.model,
+                        contents=[types.Content(role="user", parts=parts)],
+                        config=config,
+                    ),
+                    timeout=TIMEOUT_SECONDS,
                 )
                 if isinstance(response.parsed, ParsedIntent):
                     return response.parsed
@@ -133,7 +138,10 @@ class GeminiParser:
                     break
                 log.warning("Gemini returned %s, retrying", exc.code)
                 await asyncio.sleep(2 * 3**attempt)
-            except ValueError as exc:  # malformed or empty JSON
+            except asyncio.TimeoutError:
+                last = TimeoutError(f"no answer from Gemini within {TIMEOUT_SECONDS}s")
+                log.warning("Gemini timed out, retrying")
+            except Exception as exc:  # malformed JSON, network failure, ...
                 last = exc
                 break
         raise LLMError(str(last)) from last

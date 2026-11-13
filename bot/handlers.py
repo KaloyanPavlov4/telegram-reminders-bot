@@ -1,5 +1,6 @@
 """Telegram handlers: messages, commands, buttons and the scheduler tick."""
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -191,6 +192,17 @@ async def _complete(st: State, rem: Reminder) -> str:
 # --- message processing ---------------------------------------------------
 
 
+async def _keep_typing(bot, chat_id: int) -> None:
+    """Show "typing…" until cancelled. Telegram clears it after ~5 seconds, and
+    a Gemini call can take much longer."""
+    while True:
+        try:
+            await bot.send_chat_action(chat_id, ChatAction.TYPING)
+        except TelegramError:
+            pass
+        await asyncio.sleep(4)
+
+
 async def _process(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -201,8 +213,8 @@ async def _process(
     st = _state(context)
     msg = update.effective_message
     prior = context.user_data.pop("prior", None)
-    await context.bot.send_chat_action(msg.chat_id, ChatAction.TYPING)
     now = _now()
+    typing = asyncio.create_task(_keep_typing(context.bot, msg.chat_id))
     try:
         parsed: ParsedIntent = await st.llm.parse(
             now=now.astimezone(st.tz),
@@ -219,6 +231,8 @@ async def _process(
             context.user_data["prior"] = prior
         await msg.reply_text("Sorry, I couldn't process that right now. Please try again in a moment.")
         return
+    finally:
+        typing.cancel()
 
     said = text or parsed.transcript or ""
     if audio is not None and parsed.transcript:

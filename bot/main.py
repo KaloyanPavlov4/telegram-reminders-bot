@@ -45,6 +45,8 @@ def build(settings: Settings) -> Application:
     app = (
         Application.builder()
         .token(settings.telegram_token)
+        # Don't let a slow Gemini call hold up commands and button presses.
+        .concurrent_updates(True)
         .post_init(_post_init)
         .post_shutdown(_post_shutdown)
         .build()
